@@ -1,0 +1,17 @@
+# @package _global_
+# Debug experiment: Quick test run
+# Run with: uv run python -m grave_border_detection.train experiment=debug
+
+experiment_name: debug  # Quick tests only
+
+# Smaller batches, no multiprocessing for easier debugging
+data:
+  batch_size: 4
+  num_workers: 0
+
+# Quick training
+training:
+  max_epochs: 3
+  log_every_n_steps: 1
+  early_stopping:
+    enabled: false

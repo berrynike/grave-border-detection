@@ -1,0 +1,33 @@
+# Main configuration file - composes all other configs
+# Override with: uv run python -m grave_border_detection.train data.batch_size=16
+
+defaults:
+  - data: rgb_dem              # Options: rgb_dem (4ch), rgb_only (3ch)
+  - model: unet_resnet34
+  - training: default
+  - augmentation: default
+  - optional experiment: null  # Presets: debug, baseline_rgb, full
+  - _self_
+
+# Project paths
+paths:
+  root: ${hydra:runtime.cwd}
+  data: ${paths.root}/data
+  output: ${paths.root}/outputs
+  checkpoints: ${paths.output}/checkpoints
+  logs: ${paths.output}/logs
+
+# Random seed for reproducibility
+seed: 42
+
+# MLflow experiment name (folder for grouping runs)
+# Options: debug (quick tests), synthetic (synthetic data), real (real data)
+experiment_name: synthetic
+
+# Hydra configuration
+hydra:
+  run:
+    dir: ${paths.output}/runs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ${paths.output}/sweeps/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}

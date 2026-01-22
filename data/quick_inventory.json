@@ -1,0 +1,172 @@
+{
+  "last_updated": "2026-01-21",
+  "total_cemeteries": 10,
+  "crs": "EPSG:3857",
+  "crs_consistent": true,
+  "annotations_exist": false,
+  "data_location": "data/external/goetiff-orthos-ki-training-data/4k/",
+  "cemeteries": {
+    "01": {
+      "name": "Weilkirchen, Zangberg",
+      "orthophoto": {
+        "file": "01-251107Weilkirchen1Zangberg_v08epsg3857_res0.0046m-ortho4k.tif",
+        "size_px": [4096, 3920],
+        "resolution_m": 0.019,
+        "size_mb": 63.1
+      },
+      "dem_tif": {
+        "file": "01-251107v08epsg3857_res0.0046m-DEM.tif",
+        "size_px": [1422, 1361],
+        "resolution_m": 0.055,
+        "size_mb": 6.2
+      },
+      "dem_gpkg": {
+        "file": "01-251107v10epsg3857_res0.036m-DEM.gpkg",
+        "tiles": 5,
+        "zoom_levels": 2,
+        "size_mb": 2.3
+      }
+    },
+    "02": {
+      "name": "Kirchweg, Heldenstein",
+      "orthophoto": {
+        "file": "02Kirchweg21Heldenstein-251107-epsg3857-res0.008m-ortho-4k.tif",
+        "size_px": [4096, 3828],
+        "resolution_m": 0.027,
+        "size_mb": 44.5
+      },
+      "dem_tif": {
+        "file": "02-251107-epsg3857-res0.008m-2.1mio-pcld_res0.03m_cleaned_DEM.tif",
+        "size_px": [1604, 2043],
+        "resolution_m": 0.049,
+        "size_mb": 9.2
+      },
+      "dem_gpkg": {
+        "file": "02-251107-epsg3857-res0.008m-2.1mio-pcld_res0.03m_cleaned_DEM.gpkg",
+        "tiles": 5,
+        "zoom_levels": 2,
+        "size_mb": 3.5
+      }
+    },
+    "03": {
+      "name": "Lauterbach, Heldenstein",
+      "orthophoto": {
+        "file": "03-251108Lauterbach31Heldenstein-Lauterbach-epsg3857-res0.009m_ortho.tif",
+        "size_px": [4096, 3925],
+        "resolution_m": 0.022,
+        "size_mb": 45.1
+      },
+      "dem_gpkg": {
+        "file": "03-251108-epsg3857-res0.0354m_1.9mio-pcld_DEM.gpkg",
+        "tiles": 5,
+        "zoom_levels": 2,
+        "size_mb": 3.3
+      }
+    },
+    "04": {
+      "name": "Kirchstr, Heldenstein",
+      "orthophoto": {
+        "file": "04-251108Kirchstr3Heldenstein-epsg3857-res0.009m-ortho4k.tif",
+        "size_px": [4096, 3624],
+        "resolution_m": 0.026,
+        "size_mb": 58.1
+      },
+      "dem_gpkg": {
+        "file": "04-251108-epsg3857-res0.037m_2.7mio-pcld_DEM.gpkg",
+        "tiles": 5,
+        "zoom_levels": 2,
+        "size_mb": 4.7
+      }
+    },
+    "05": {
+      "name": "Salmannskirchen",
+      "orthophoto": {
+        "file": "05-251108Salmanskrichen6-alt-neu-epsg3857_res0.008m_ortho4k.tif",
+        "size_px": [3134, 4096],
+        "resolution_m": 0.026,
+        "size_mb": 46.1
+      },
+      "dem_gpkg": {
+        "file": "05-251108-epsg3857_1.6mio-pcld_res0.03m_DEM.gpkg",
+        "tiles": 5,
+        "zoom_levels": 2,
+        "size_mb": 3.8
+      }
+    },
+    "06": {
+      "name": "Palmberg, Zangberg",
+      "orthophoto": {
+        "file": "06-251112Palmberg37Zangberg-epsg3857-res0.09m_4k.tif",
+        "size_px": [3736, 4096],
+        "resolution_m": 0.035,
+        "size_mb": 50.5
+      },
+      "dem_gpkg": {
+        "file": "06-251112-epsg25832_4mio-pcld_res0.037m_DEM.gpkg",
+        "tiles": 14,
+        "zoom_levels": 3,
+        "size_mb": 7.6
+      }
+    },
+    "07": {
+      "name": "Palmberg, Zangberg",
+      "orthophoto": {
+        "file": "07-251112Palmberg37Zangberg-epsg3857-res0.07m_4k.tif",
+        "size_px": [4096, 3050],
+        "resolution_m": 0.034,
+        "size_mb": 56.0
+      },
+      "dem_gpkg": {
+        "file": "07-251112-epsg3857_4.3mio-pcld_res0.037m_DEM.gpkg",
+        "tiles": 14,
+        "zoom_levels": 3,
+        "size_mb": 9.3
+      }
+    },
+    "08": {
+      "name": "Feldmochinger, München",
+      "orthophoto": {
+        "file": "08-251119Fledmochingerstr401Muenchen_epsg3857_res0.08m_4k.tif",
+        "size_px": [4096, 2566],
+        "resolution_m": 0.037,
+        "size_mb": 44.2
+      },
+      "dem_gpkg": {
+        "file": "08-251119-epsg3857_3.8mio-pcld_res0.0342m_DEM.gpkg",
+        "tiles": 9,
+        "zoom_levels": 3,
+        "size_mb": 7.5
+      }
+    },
+    "09": {
+      "name": "St. Nikolaus",
+      "orthophoto": {
+        "file": "09StNikolaus251128-epsg3857-res-0.009m_4k.tif",
+        "size_px": [4096, 3445],
+        "resolution_m": 0.045,
+        "size_mb": 40.6
+      },
+      "dem_gpkg": {
+        "file": "09StNikolaus251128-epsg3857-5.8mio-pcld-res-0.039m_crop.gpkg",
+        "tiles": 15,
+        "zoom_levels": 3,
+        "size_mb": 9.6
+      }
+    },
+    "10": {
+      "name": "Westerbuchberg",
+      "orthophoto": {
+        "file": "10-Westerbuchberg251128-epsg3857-ortho4k.tif",
+        "size_px": [4049, 4096],
+        "resolution_m": 0.020,
+        "size_mb": 53.6
+      },
+      "dem_gpkg": {
+        "file": "10-Westerbuchberg251128-epsg3857-1.7miopcld-res0.025m_DEM.gpkg",
+        "tiles": 6,
+        "zoom_levels": 2,
+        "size_mb": 4.1
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+# @package _global_
+# Full experiment: RGB + DEM, full training
+# Run with: uv run python -m grave_border_detection.train experiment=full
+
+defaults:
+  - override /data: rgb_dem  # Use RGB+DEM data config
+
+experiment_name: full
+
+# Model must match data input channels
+model:
+  in_channels: 4
+
+# Full training
+training:
+  max_epochs: 100

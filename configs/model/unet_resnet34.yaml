@@ -1,0 +1,18 @@
+# U-Net model with ResNet34 encoder
+# Override with: model.encoder_name=efficientnet-b3
+
+# Architecture
+architecture: Unet
+encoder_name: resnet34
+encoder_weights: imagenet  # or null for random init
+
+# Input/Output
+in_channels: ${data.input_channels}
+classes: 1  # Binary segmentation (grave vs background)
+
+# Decoder settings
+decoder_channels: [256, 128, 64, 32, 16]
+decoder_attention_type: null  # or "scse" for attention
+
+# Activation for final layer
+activation: null  # Use sigmoid in loss function instead

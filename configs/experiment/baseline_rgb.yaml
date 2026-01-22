@@ -1,0 +1,16 @@
+# @package _global_
+# Baseline experiment: RGB-only, shorter training
+# Run with: uv run python -m grave_border_detection.train experiment=baseline_rgb
+
+defaults:
+  - override /data: rgb_only  # Use RGB-only data config
+
+experiment_name: baseline_rgb
+
+# Model must match data input channels
+model:
+  in_channels: 3
+
+# Shorter training for baseline
+training:
+  max_epochs: 50

@@ -1,0 +1,64 @@
+# Grave Border Detection - Cursor Rules
+
+**CRITICAL: Follow Python rules in `docs/python-rules.md`**
+
+## Project Overview (2026)
+
+Computer vision project for detecting cemetery grave borders from drone imagery using deep learning (PyTorch/Lightning).
+
+## Quick Reference
+
+### Commands
+
+```bash
+uv run ruff check .                              # Lint
+uv run ruff format .                             # Format
+uv run mypy src/                                 # Type check
+uv run pytest tests/ -v --cov=grave_border_detection  # Test
+```
+
+### File Organization
+
+- `src/grave_border_detection/models/` - One model class per file
+- `src/grave_border_detection/data/` - Data loaders and datasets
+- `src/grave_border_detection/preprocessing/` - Data preparation
+- `src/grave_border_detection/postprocessing/` - Vectorization, export
+- `configs/` - Hydra configuration files
+- `tests/unit/` and `tests/integration/` - Mirror source structure
+
+## Core Principles
+
+1. **Type Safety**: Type hints on all functions, never use `any`
+2. **Modern Python 3.12+**: See `docs/python-rules.md` for syntax
+3. **Fail Fast**: No silent fallbacks, no defensive "just in case" error handling. Raise exceptions explicitly.
+4. **No Backwards Compatibility**: Delete old code, don't deprecate. No compatibility shims or re-exports.
+5. **CRS Integrity**: Always preserve coordinate reference systems
+6. **Memory Aware**: Windowed reading for large rasters, tiling for large images
+
+## Editing Guidelines
+
+- **Edit inline**: When updating docs or code, modify existing content in place. Don't append new sections at the end while leaving outdated content above.
+- **Delete, don't deprecate**: Remove obsolete code/docs entirely. No `# deprecated` comments or `_old_` prefixes.
+- **No silent fallbacks**: Never add try/except that swallows errors or returns defaults. If something fails, let it fail loudly.
+
+## Before Completing Any Task
+
+- [ ] `uv run ruff check .` passes
+- [ ] `uv run ruff format .` passes
+- [ ] `uv run mypy src/` passes
+- [ ] Tests pass with 80%+ coverage
+- [ ] No unused imports/variables
+- [ ] CRS preserved in geospatial ops
+
+## Common Mistakes
+
+- Using `typing.List/Dict/Optional` instead of `list/dict/| None`
+- Using `os.path` instead of `pathlib.Path`
+- Catching bare `Exception` without re-raising
+- Loading entire large rasters into memory
+- Hardcoding CRS without verification
+
+## Reference
+
+- **Python Rules**: `docs/python-rules.md`
+- **Project Description**: `docs/Project_Description.md`

@@ -1,0 +1,30 @@
+{
+  "num_cemeteries": 3,
+  "total_graves": 60,
+  "image_size": [
+    512,
+    512
+  ],
+  "resolution_m": 0.02,
+  "crs": "EPSG:3857",
+  "files": {
+    "orthophotos": [
+      "data/synthetic/orthophotos/synthetic_01_ortho.tif",
+      "data/synthetic/orthophotos/synthetic_02_ortho.tif",
+      "data/synthetic/orthophotos/synthetic_03_ortho.tif"
+    ],
+    "dems": [
+      "data/synthetic/dems/synthetic_01_dem.tif",
+      "data/synthetic/dems/synthetic_02_dem.tif",
+      "data/synthetic/dems/synthetic_03_dem.tif"
+    ],
+    "masks": [
+      "data/synthetic/masks/synthetic_01_mask.tif",
+      "data/synthetic/masks/synthetic_02_mask.tif",
+      "data/synthetic/masks/synthetic_03_mask.tif"
+    ],
+    "annotations": [
+      "data/synthetic/annotations/synthetic_annotations.gpkg"
+    ]
+  }
+}

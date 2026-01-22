@@ -1,0 +1,144 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Data files - never commit large data
+data/raw/*
+data/processed/*
+data/interim/*
+data/external/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/interim/.gitkeep
+!data/external/.gitkeep
+
+# Model checkpoints and outputs
+models/*
+!models/.gitkeep
+outputs/
+logs/
+wandb/
+mlruns/
+
+# Large files
+*.tif
+*.tiff
+*.gpkg
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.kml
+*.kmz
+*.h5
+*.hdf5
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# uv
+.uv/
+uv.lock
