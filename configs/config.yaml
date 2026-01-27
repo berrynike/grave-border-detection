@@ -3,7 +3,7 @@
 
 defaults:
   - _self_                      # Base config applied first
-  - data: rgb_dem              # Options: rgb_dem (4ch), rgb_only (3ch)
+  - data: synthetic            # Options: synthetic, real (add data.use_dem=false for RGB-only)
   - model: unet_resnet34
   - training: default
   - augmentation: default
@@ -21,8 +21,9 @@ paths:
 seed: 42
 
 # MLflow experiment name (folder for grouping runs)
-# Options: debug (quick tests), synthetic (synthetic data), real (real data)
-experiment_name: synthetic
+# Set to match your data: synthetic, real, debug
+# Override with: experiment_name=real
+experiment_name: synthetic  # Default for data=synthetic
 
 # Hydra configuration
 hydra:

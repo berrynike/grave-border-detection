@@ -15,3 +15,5 @@ training:
   log_every_n_steps: 1
   early_stopping:
     enabled: false
+  logging:
+    log_images_every_n_epochs: 3  # Log on last epoch for debug runs

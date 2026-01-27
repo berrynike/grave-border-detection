@@ -1,7 +1,8 @@
 """Callback for logging full cemetery visualizations after test phase.
 
-Uses MLflow's native log_image() API for image logging.
-See: https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.log_image
+Logs test results to `final/` artifact folder:
+- {cemetery_id}_combined.png: Full cemetery visualization
+- {cemetery_id}_predictions.gpkg: Vectorized predictions
 """
 
 import logging
@@ -130,16 +131,16 @@ class FullCemeteryVisualizationCallback(L.Callback):
                     polygons_to_geopackage(polygons, gpkg_path, crs=crs)
                     log.info(f"Exported {len(polygons)} polygons")
 
-                    # Log GeoPackage to MLflow
+                    # Log GeoPackage to MLflow final/ folder
                     if mlflow_logger is not None:
-                        self._log_file_to_mlflow(mlflow_logger, gpkg_path, "predictions")
+                        self._log_file_to_mlflow(mlflow_logger, gpkg_path, "final")
 
-                # Log to MLflow
+                # Log visualization to MLflow final/ folder
                 if mlflow_logger is not None:
                     self._log_image_to_mlflow(
                         mlflow_logger,
                         viz,
-                        f"full_cemetery_{cemetery_id}",
+                        f"{cemetery_id}_combined",
                         tmpdir_path,
                     )
                 else:
@@ -166,7 +167,7 @@ class FullCemeteryVisualizationCallback(L.Callback):
         name: str,
         tmpdir: Path,
     ) -> None:
-        """Log image array to MLflow using temp file and log_artifact.
+        """Log image array to MLflow final/ folder.
 
         Args:
             logger: MLflow logger instance.
@@ -188,8 +189,8 @@ class FullCemeteryVisualizationCallback(L.Callback):
         img_pil.save(img_path)
 
         client = MlflowClient()
-        client.log_artifact(run_id, str(img_path), artifact_path="full_cemetery_predictions")
-        log.info(f"Logged {name} to MLflow")
+        client.log_artifact(run_id, str(img_path), artifact_path="final")
+        log.info(f"Logged {name} to MLflow (final/)")
 
     def _save_image(self, image: "np.ndarray", path: Path) -> None:
         """Save image to disk."""

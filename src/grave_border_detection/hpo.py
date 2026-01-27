@@ -147,10 +147,11 @@ def create_objective(
         )
 
         # Callbacks
+        # Log images on last epoch (max_epochs) to ensure at least one image log
         callbacks: list[L.Callback] = [
             PyTorchLightningPruningCallback(trial, monitor="val/dice"),
             EarlyStopping(monitor="val/dice", patience=10, mode="max"),
-            ImageLoggerCallback(num_samples=2, log_every_n_epochs=5),
+            ImageLoggerCallback(num_samples=2, log_every_n_epochs=max_epochs),
         ]
 
         # Create child run under parent (nested run pattern)

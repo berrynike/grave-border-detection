@@ -1,6 +1,6 @@
 # Data Inventory
 
-Last updated: 2026-01-21
+Last updated: 2026-01-23
 
 ## Summary
 
@@ -10,14 +10,15 @@ Last updated: 2026-01-21
 | Orthophotos | 10 |
 | DEMs (GeoTIFF) | 2 |
 | DEMs (GeoPackage tiles) | 10 |
+| Vector Annotations | 10 GeoPackages (1,465 polygons) |
 | CRS | EPSG:3857 (Web Mercator) |
 | CRS Consistent | Yes |
-| Vector Annotations | **None yet** |
 
-## Data Location
+## Data Locations
 
 ```
-data/external/goetiff-orthos-ki-training-data/4k/
+data/external/goetiff-orthos-ki-training-data/4k/   # Orthophotos + DEMs
+data/external/shape/                                 # Vector annotations
 ```
 
 ## Orthophotos
@@ -73,18 +74,35 @@ All data uses **EPSG:3857** (Web Mercator / Pseudo-Mercator).
 - No reprojection needed for combining datasets
 - Note: EPSG:3857 has metric distortion at high latitudes (Bavaria ~48°N has ~1.5x distortion)
 
-## Annotations Status
+## Vector Annotations
 
-**No vector annotations exist yet.**
+**Location:** `data/external/shape/`
 
-The `.gpkg` files in the data directory are **raster DEM tiles**, not vector annotations. Grave border annotations need to be created before model training can begin.
+Grave border annotations are provided as GeoPackage files with polygon geometries.
 
-### Annotation Requirements
+| ID | Cemetery | Polygons | File Size |
+|----|----------|----------|-----------|
+| 01 | Weilkirchen, Zangberg | 68 | 56 KB |
+| 02 | Kirchweg, Heldenstein | 61 | 56 KB |
+| 03 | Lauterbach, Heldenstein | 66 | 56 KB |
+| 04 | Kirchstr, Heldenstein | 112 | 68 KB |
+| 05 | Salmannskirchen | 80 | 60 KB |
+| 06 | Palmberg, Zangberg | 101 | 64 KB |
+| 07 | Marktplatz, Ampfling | 162 | 80 KB |
+| 08 | Feldmochinger, München | 253 | 100 KB |
+| 09 | Dorfstr, Übersee | 514 | 164 KB |
+| 10 | Westerbuchberg, Übersee | 48 | 52 KB |
 
-- Format: GeoPackage or GeoJSON (vector polygons)
-- CRS: EPSG:3857 (match source data)
-- Geometry: Polygons representing grave border outlines
-- Attributes: `grave_id`, `cemetery_id`, optional metadata
+**Total: 1,465 grave polygons**
+
+### Annotation Format
+
+- **Format:** GeoPackage (vector)
+- **CRS:** EPSG:3857 (matches orthophotos)
+- **Geometry:** Polygon
+- **Attributes:**
+  - `LAYER`: "1440 Grab belegt_pg" (occupied grave polygon)
+  - `NAME`: "Grab belegt" (occupied grave)
 
 ## Data Quality Notes
 
@@ -96,10 +114,11 @@ The `.gpkg` files in the data directory are **raster DEM tiles**, not vector ann
 
 ## Preprocessing Needs
 
-Before training:
+Before training on real data:
 
-1. [ ] Create grave border annotations (manual labeling)
-2. [ ] Generate training tiles (256×256 or 512×512)
-3. [ ] Create train/val/test splits by cemetery
-4. [ ] Normalize elevation data if using DEM channel
-5. [ ] Verify spatial alignment between ortho and DEM
+1. [x] Create grave border annotations (manual labeling) ✅
+2. [ ] Rasterize vector annotations to mask GeoTIFFs
+3. [ ] Generate training tiles (256×256 or 512×512)
+4. [ ] Create train/val/test splits by cemetery
+5. [ ] Normalize elevation data if using DEM channel
+6. [ ] Verify spatial alignment between ortho, DEM, and annotations

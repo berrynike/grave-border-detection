@@ -1,5 +1,6 @@
-# Data configuration: RGB only (3 channels, no DEM)
-# Use with: data=rgb_only
+# Data configuration: Synthetic cemetery data
+# Use with: data=synthetic
+# For RGB-only: data=synthetic data.use_dem=false data.input_channels=3
 
 # Data paths
 root: ${paths.data}/synthetic
@@ -19,9 +20,9 @@ tiling:
   overlap: 0.15
   min_mask_coverage: 0.01
 
-# Input: RGB only = 3 channels
-input_channels: 3
-use_dem: false
+# Input: RGB + DEM = 4 channels (set use_dem=false, input_channels=3 for RGB-only)
+use_dem: true
+input_channels: 4
 
 # DataLoader settings
 batch_size: 8

@@ -1,4 +1,8 @@
-"""Callback for logging prediction images to MLflow."""
+"""Callback for logging prediction images to MLflow during training.
+
+Logs sample predictions to `epochs/epoch_XXX/` artifact folder.
+For full test set visualization, see FullCemeteryVisualizationCallback.
+"""
 
 import logging
 import tempfile
@@ -14,12 +18,13 @@ log = logging.getLogger(__name__)
 
 
 class ImageLoggerCallback(L.Callback):
-    """Log sample predictions as images to MLflow.
+    """Log sample predictions as images to MLflow during validation.
 
-    Creates a combined image showing input RGB, optional DEM, prediction heatmap,
-    and error map. Also logs each component individually (including gt_overlay).
+    Logs to `epochs/epoch_XXX/` with:
+    - combined.png: Grid with all samples (one row per sample)
+    - sample_N/: Individual component images for each sample
 
-    Combined columns:
+    Combined columns per row:
     - RGB-only (3ch): [RGB | Pred heatmap | Error map]
     - RGB+DEM (4ch):  [RGB | DEM | Pred heatmap | Error map]
     """
@@ -88,16 +93,16 @@ class ImageLoggerCallback(L.Callback):
             logits = pl_module(images[:num_samples].to(device))
             preds = torch.sigmoid(logits).cpu()
 
-        # Create grid and individual images
-        grid, individual = self._create_prediction_grid(
+        # Create combined and individual images
+        combined, individual = self._create_prediction_images(
             images[:num_samples],
             masks[:num_samples],
             preds,
         )
 
-        # Log to MLflow
+        # Log to MLflow under epochs/ folder
         epoch_name = f"epoch_{trainer.current_epoch:03d}"
-        self._log_images_to_mlflow(mlflow_logger, grid, individual, epoch_name)
+        self._log_images_to_mlflow(mlflow_logger, combined, individual, epoch_name)
 
         # Clear stored batches
         self._val_batches = []
@@ -110,13 +115,13 @@ class ImageLoggerCallback(L.Callback):
             return trainer.logger
         return None
 
-    def _create_prediction_grid(
+    def _create_prediction_images(
         self,
         images: torch.Tensor,
         masks: torch.Tensor,
         preds: torch.Tensor,
     ) -> tuple[torch.Tensor, dict[str, list[torch.Tensor]]]:
-        """Create a grid and individual images for logging.
+        """Create combined grid and individual images for logging.
 
         Args:
             images: Input images (N, C, H, W) - 3 channels (RGB) or 4 (RGB+DEM).
@@ -125,7 +130,7 @@ class ImageLoggerCallback(L.Callback):
 
         Returns:
             Tuple of:
-            - Grid image as tensor (3, H*N, W*num_cols)
+            - Combined image as tensor (3, H*N, W*num_cols) - one row per sample
             - Dict mapping component names to lists of individual images
         """
         n_samples = images.shape[0]
@@ -208,7 +213,7 @@ class ImageLoggerCallback(L.Callback):
 
             individual["error_map"].append(error_map)
 
-            # Build row columns for combined image (gt_overlay logged separately)
+            # Build row for combined image (one row per sample)
             # RGB-only: [RGB | Pred heatmap | Error map]
             # RGB+DEM:  [RGB | DEM | Pred heatmap | Error map]
             if has_dem and dem_viz is not None:
@@ -217,10 +222,10 @@ class ImageLoggerCallback(L.Callback):
                 row = torch.cat([img, prob_heatmap, error_map], dim=2)
             rows.append(row)
 
-        # Stack vertically
-        grid = torch.cat(rows, dim=1)
+        # Stack rows vertically (one row per sample)
+        combined = torch.cat(rows, dim=1)
 
-        return grid, individual
+        return combined, individual
 
     def _visualize_dem(self, dem: torch.Tensor) -> torch.Tensor:
         """Visualize DEM as terrain colormap.
@@ -274,19 +279,30 @@ class ImageLoggerCallback(L.Callback):
     def _log_images_to_mlflow(
         self,
         logger: MLFlowLogger,
-        grid: torch.Tensor,
+        combined: torch.Tensor,
         individual: dict[str, list[torch.Tensor]],
         epoch_name: str,
     ) -> None:
         """Log combined grid and individual components to MLflow.
 
-        Uses temp files and MlflowClient.log_artifact() for clean directory structure.
+        Artifact structure:
+            epochs/
+              epoch_000/
+                combined.png          # Grid with all samples
+                sample_0/
+                  rgb.png
+                  dem.png             # (if available)
+                  gt_overlay.png
+                  pred_heatmap.png
+                  error_map.png
+                sample_1/
+                  ...
 
         Args:
             logger: MLflow logger instance.
-            grid: Combined grid image (3, H, W).
+            combined: Combined grid image (3, H, W).
             individual: Dict mapping component names to lists of images.
-            epoch_name: Epoch identifier (e.g., "epoch_005").
+            epoch_name: Epoch identifier (e.g., "epoch_000").
         """
         from mlflow.tracking import MlflowClient
 
@@ -296,25 +312,31 @@ class ImageLoggerCallback(L.Callback):
             return
 
         client = MlflowClient()
+        epoch_artifact_path = f"epochs/{epoch_name}"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
-            # Log combined grid image
-            grid_path = tmpdir_path / f"grid_{epoch_name}.png"
-            self._save_image(self._tensor_to_numpy(grid), grid_path)
-            client.log_artifact(run_id, str(grid_path), artifact_path="predictions/grid")
+            # Log combined image (grid with all samples)
+            combined_path = tmpdir_path / "combined.png"
+            self._save_image(self._tensor_to_numpy(combined), combined_path)
+            client.log_artifact(run_id, str(combined_path), artifact_path=epoch_artifact_path)
 
-            # Log individual components
-            for component_name, images in individual.items():
-                for i, img_tensor in enumerate(images):
-                    img_path = tmpdir_path / f"{component_name}_{epoch_name}_sample{i}.png"
+            # Log individual components organized by sample
+            # Get number of samples from first component
+            first_component = next(iter(individual.values()))
+            num_samples = len(first_component)
+
+            for sample_idx in range(num_samples):
+                sample_artifact_path = f"{epoch_artifact_path}/sample_{sample_idx}"
+
+                for component_name, images in individual.items():
+                    img_tensor = images[sample_idx]
+                    img_path = tmpdir_path / f"{component_name}.png"
                     self._save_image(self._tensor_to_numpy(img_tensor), img_path)
-                    client.log_artifact(
-                        run_id, str(img_path), artifact_path=f"predictions/{component_name}"
-                    )
+                    client.log_artifact(run_id, str(img_path), artifact_path=sample_artifact_path)
 
-        log.info(f"Logged predictions for {epoch_name} to MLflow")
+        log.info(f"Logged predictions for {epoch_name} to MLflow (epochs/)")
 
     def _tensor_to_numpy(self, tensor: torch.Tensor) -> np.ndarray:
         """Convert tensor to numpy array.

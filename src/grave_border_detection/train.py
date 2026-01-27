@@ -11,6 +11,7 @@ from lightning.pytorch.loggers import MLFlowLogger
 from omegaconf import DictConfig, OmegaConf
 
 from grave_border_detection.callbacks import (
+    CheckpointLoggerCallback,
     FullCemeteryVisualizationCallback,
     ImageLoggerCallback,
 )
@@ -35,10 +36,10 @@ def setup_callbacks(cfg: DictConfig) -> list[L.Callback]:
     # Model checkpointing
     checkpoint_callback = ModelCheckpoint(
         dirpath=cfg.training.checkpoint_dir,
-        filename="{epoch:02d}-{val/dice:.4f}",
+        filename="best",  # Cleaner name, score is in MLflow metrics
         monitor="val/dice",
         mode="max",
-        save_top_k=3,
+        save_top_k=1,  # Just keep the best
         save_last=True,
     )
     callbacks.append(checkpoint_callback)
@@ -73,6 +74,9 @@ def setup_callbacks(cfg: DictConfig) -> list[L.Callback]:
         )
         callbacks.append(full_viz_callback)
 
+    # Checkpoint logging to MLflow (logs to checkpoints/ folder)
+    callbacks.append(CheckpointLoggerCallback())
+
     return callbacks
 
 
@@ -93,7 +97,7 @@ def setup_logger(cfg: DictConfig) -> MLFlowLogger | None:
     return MLFlowLogger(
         experiment_name=experiment_name,
         tracking_uri=cfg.training.get("mlflow_tracking_uri", "mlruns"),
-        log_model=True,
+        log_model=False,  # We log checkpoints manually to checkpoints/ folder
     )
 
 
@@ -165,7 +169,8 @@ def train(cfg: DictConfig) -> float | None:
         logger.log_hyperparams(config_dict)
 
         # Log dataset_id as a tag for prominent visibility in MLflow UI
-        logger.experiment.set_tag("dataset_id", dataset_id)
+        if logger.run_id:
+            logger.experiment.set_tag(logger.run_id, "dataset_id", dataset_id)
 
     # Determine accelerator
     accelerator = cfg.training.get("accelerator", "auto")
