@@ -16,7 +16,7 @@ import cv2
 import geopandas as gpd
 import numpy as np
 import rasterio.features
-from affine import Affine  # type: ignore[import-untyped]
+from affine import Affine
 from shapely.geometry import shape
 from shapely.validation import make_valid
 
@@ -46,9 +46,7 @@ def prediction_to_instances(
 
     # Morphological cleaning: close small holes, then open to remove noise
     if morphology_size > 0:
-        kernel = cv2.getStructuringElement(
-            cv2.MORPH_ELLIPSE, (morphology_size, morphology_size)
-        )
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (morphology_size, morphology_size))
         binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel).astype(np.uint8)
         binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel).astype(np.uint8)
 

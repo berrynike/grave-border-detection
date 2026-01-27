@@ -1,0 +1,54 @@
+# HPO configuration
+# Run with: uv run python -m grave_border_detection.hpo
+# Resume interrupted study: just run the same command again
+
+# Study settings
+study_name: grave_border_hpo
+storage: sqlite:///hpo_studies.db
+direction: maximize  # Maximize val/dice
+n_trials: 50
+timeout: null  # No timeout by default (set in seconds if needed)
+
+# Pruning (early stop bad trials)
+pruner:
+  type: median
+  n_startup_trials: 5    # Don't prune first N trials
+  n_warmup_steps: 10     # Don't prune before N epochs
+  interval_steps: 1      # Check pruning every N epochs
+
+# Search space
+search_space:
+  # Learning rate (log scale)
+  lr:
+    type: float
+    low: 1.0e-5
+    high: 1.0e-2
+    log: true
+
+  # Weight decay (log scale)
+  weight_decay:
+    type: float
+    low: 1.0e-6
+    high: 1.0e-3
+    log: true
+
+  # Loss weights (BCE vs Dice balance)
+  bce_weight:
+    type: float
+    low: 0.2
+    high: 0.8
+
+  # Training epochs
+  max_epochs:
+    type: int
+    low: 50
+    high: 150
+    step: 25
+
+  # Encoder backbone
+  encoder_name:
+    type: categorical
+    choices:
+      - resnet34
+      - resnet50
+      - efficientnet-b0

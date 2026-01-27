@@ -164,10 +164,10 @@ class GraveDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         dem: NDArray[np.float32] | None = None
         if self.use_dem and ref.dem_path is not None:
             with rasterio.open(ref.dem_path) as src:
-                dem = read_tile(src, ref.tile_info, pad_to_size=self.tile_size)
-            dem = dem[0]  # Remove channel dimension
+                dem_raw = read_tile(src, ref.tile_info, pad_to_size=self.tile_size)
+            dem_channel = dem_raw[0]  # Remove channel dimension
             # Normalize DEM (z-score)
-            dem = (dem - dem.mean()) / (dem.std() + 1e-8)
+            dem = (dem_channel - dem_channel.mean()) / (dem_channel.std() + 1e-8)
 
         # Convert to HWC for albumentations
         rgb_hwc = rgb.transpose(1, 2, 0)  # CHW -> HWC

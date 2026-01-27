@@ -1,6 +1,11 @@
-"""Callback for logging full cemetery visualizations after test phase."""
+"""Callback for logging full cemetery visualizations after test phase.
+
+Uses MLflow's native log_image() API for image logging.
+See: https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.log_image
+"""
 
 import logging
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -66,78 +71,83 @@ class FullCemeteryVisualizationCallback(L.Callback):
         # Get device
         device = next(pl_module.parameters()).device
 
-        for cemetery_id in self.test_cemeteries:
-            log.info(f"Processing cemetery: {cemetery_id}")
+        # Use temp directory for all outputs (cleaned up after logging to MLflow)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
 
-            # Build paths - try multiple naming conventions
-            ortho_path = self.data_root / "orthophotos" / f"{cemetery_id}_ortho.tif"
-            if not ortho_path.exists():
-                ortho_path = self.data_root / "orthophotos" / f"{cemetery_id}.tif"
+            for cemetery_id in self.test_cemeteries:
+                log.info(f"Processing cemetery: {cemetery_id}")
 
-            mask_path = self.data_root / "masks" / f"{cemetery_id}_mask.tif"
-            if not mask_path.exists():
-                mask_path = self.data_root / "masks" / f"{cemetery_id}.tif"
+                # Build paths - try multiple naming conventions
+                ortho_path = self.data_root / "orthophotos" / f"{cemetery_id}_ortho.tif"
+                if not ortho_path.exists():
+                    ortho_path = self.data_root / "orthophotos" / f"{cemetery_id}.tif"
 
-            dem_path = None
-            if self.use_dem:
-                dem_path = self.data_root / "dems" / f"{cemetery_id}_dem.tif"
-                if not dem_path.exists():
-                    dem_path = self.data_root / "dems" / f"{cemetery_id}.tif"
+                mask_path = self.data_root / "masks" / f"{cemetery_id}_mask.tif"
+                if not mask_path.exists():
+                    mask_path = self.data_root / "masks" / f"{cemetery_id}.tif"
 
-            if not ortho_path.exists():
-                log.warning(f"Orthophoto not found: {ortho_path}")
-                continue
+                dem_path = None
+                if self.use_dem:
+                    dem_path = self.data_root / "dems" / f"{cemetery_id}_dem.tif"
+                    if not dem_path.exists():
+                        dem_path = self.data_root / "dems" / f"{cemetery_id}.tif"
 
-            # Run full inference
-            result = predict_full_cemetery(
-                model=pl_module,
-                orthophoto_path=ortho_path,
-                mask_path=mask_path if mask_path.exists() else None,
-                dem_path=dem_path,
-                tile_size=self.tile_size,
-                overlap=self.overlap,
-                device=device,
-            )
+                if not ortho_path.exists():
+                    log.warning(f"Orthophoto not found: {ortho_path}")
+                    continue
 
-            # Create visualization
-            viz = create_full_visualization(
-                rgb=result["rgb"],
-                prediction=result["prediction"],
-                mask=result.get("mask"),
-            )
-
-            # Extract polygons and export to GeoPackage
-            polygons = prediction_to_polygons(
-                result["prediction"],
-                threshold=0.5,
-                min_area=100,
-                transform=result.get("transform"),
-                simplify_tolerance=1.0,
-            )
-
-            if polygons:
-                gpkg_path = Path("outputs") / f"{cemetery_id}_predictions.gpkg"
-                crs = str(result.get("crs")) if result.get("crs") else None
-                polygons_to_geopackage(polygons, gpkg_path, crs=crs)
-                log.info(f"Exported {len(polygons)} polygons to {gpkg_path}")
-
-                # Also log GeoPackage to MLflow
-                if mlflow_logger is not None:
-                    self._log_file_to_mlflow(mlflow_logger, gpkg_path, "predictions")
-
-            # Log to MLflow
-            if mlflow_logger is not None:
-                self._log_image_to_mlflow(
-                    mlflow_logger,
-                    viz,
-                    f"full_cemetery_{cemetery_id}",
+                # Run full inference
+                result = predict_full_cemetery(
+                    model=pl_module,
+                    orthophoto_path=ortho_path,
+                    mask_path=mask_path if mask_path.exists() else None,
+                    dem_path=dem_path,
+                    tile_size=self.tile_size,
+                    overlap=self.overlap,
+                    device=device,
                 )
-            else:
-                # Save locally if no MLflow
-                output_path = Path("outputs") / f"full_cemetery_{cemetery_id}.png"
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                self._save_image(viz, output_path)
-                log.info(f"Saved visualization to {output_path}")
+
+                # Create visualization
+                viz = create_full_visualization(
+                    rgb=result["rgb"],
+                    prediction=result["prediction"],
+                    mask=result.get("mask"),
+                )
+
+                # Extract polygons and export to GeoPackage
+                polygons = prediction_to_polygons(
+                    result["prediction"],
+                    threshold=0.5,
+                    min_area=100,
+                    transform=result.get("transform"),
+                    simplify_tolerance=1.0,
+                )
+
+                if polygons:
+                    gpkg_path = tmpdir_path / f"{cemetery_id}_predictions.gpkg"
+                    crs = str(result.get("crs")) if result.get("crs") else None
+                    polygons_to_geopackage(polygons, gpkg_path, crs=crs)
+                    log.info(f"Exported {len(polygons)} polygons")
+
+                    # Log GeoPackage to MLflow
+                    if mlflow_logger is not None:
+                        self._log_file_to_mlflow(mlflow_logger, gpkg_path, "predictions")
+
+                # Log to MLflow
+                if mlflow_logger is not None:
+                    self._log_image_to_mlflow(
+                        mlflow_logger,
+                        viz,
+                        f"full_cemetery_{cemetery_id}",
+                        tmpdir_path,
+                    )
+                else:
+                    # Save locally only if no MLflow (fallback)
+                    output_path = Path("outputs") / f"full_cemetery_{cemetery_id}.png"
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._save_image(viz, output_path)
+                    log.info(f"Saved visualization to {output_path}")
 
         log.info("Full cemetery visualizations complete.")
 
@@ -154,27 +164,32 @@ class FullCemeteryVisualizationCallback(L.Callback):
         logger: MLFlowLogger,
         image: "np.ndarray",
         name: str,
+        tmpdir: Path,
     ) -> None:
-        """Log image array to MLflow."""
-        try:
-            import tempfile
+        """Log image array to MLflow using temp file and log_artifact.
 
-            import mlflow
-            from PIL import Image
+        Args:
+            logger: MLflow logger instance.
+            image: Image array (H, W, 3) in uint8 format.
+            name: Image name (without extension).
+            tmpdir: Temporary directory for intermediate files.
+        """
+        from mlflow.tracking import MlflowClient
+        from PIL import Image
 
-            img_pil = Image.fromarray(image)
+        run_id = logger.run_id
+        if not run_id:
+            log.warning("No MLflow run_id, skipping image logging")
+            return
 
-            with tempfile.TemporaryDirectory() as tmpdir:
-                img_path = Path(tmpdir) / f"{name}.png"
-                img_pil.save(img_path)
+        # Save to temp file then log as artifact
+        img_path = tmpdir / f"{name}.png"
+        img_pil = Image.fromarray(image)
+        img_pil.save(img_path)
 
-                run_id = logger.run_id
-                if run_id:
-                    mlflow.log_artifact(str(img_path), artifact_path="full_cemetery_predictions")
-                    log.info(f"Logged {name} to MLflow")
-
-        except Exception as e:
-            log.warning(f"Failed to log image to MLflow: {e}")
+        client = MlflowClient()
+        client.log_artifact(run_id, str(img_path), artifact_path="full_cemetery_predictions")
+        log.info(f"Logged {name} to MLflow")
 
     def _save_image(self, image: "np.ndarray", path: Path) -> None:
         """Save image to disk."""
@@ -190,12 +205,18 @@ class FullCemeteryVisualizationCallback(L.Callback):
         artifact_path: str,
     ) -> None:
         """Log a file to MLflow artifacts."""
-        try:
-            import mlflow
+        from mlflow.tracking import MlflowClient
 
-            run_id = logger.run_id
-            if run_id and file_path.exists():
-                mlflow.log_artifact(str(file_path), artifact_path=artifact_path)
-                log.info(f"Logged {file_path.name} to MLflow")
-        except Exception as e:
-            log.warning(f"Failed to log file to MLflow: {e}")
+        run_id = logger.run_id
+        if not run_id:
+            log.warning("No MLflow run_id, skipping file logging")
+            return
+
+        if not file_path.exists():
+            log.warning(f"File not found: {file_path}")
+            return
+
+        # Log to MLflow using client (doesn't require active run context)
+        client = MlflowClient()
+        client.log_artifact(run_id, str(file_path), artifact_path=artifact_path)
+        log.info(f"Logged {file_path.name} to MLflow")

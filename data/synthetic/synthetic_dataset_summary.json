@@ -1,6 +1,6 @@
 {
-  "num_cemeteries": 3,
-  "total_graves": 60,
+  "num_cemeteries": 4,
+  "total_graves": 80,
   "image_size": [
     512,
     512
@@ -11,17 +11,20 @@
     "orthophotos": [
       "data/synthetic/orthophotos/synthetic_01_ortho.tif",
       "data/synthetic/orthophotos/synthetic_02_ortho.tif",
-      "data/synthetic/orthophotos/synthetic_03_ortho.tif"
+      "data/synthetic/orthophotos/synthetic_03_ortho.tif",
+      "data/synthetic/orthophotos/synthetic_04_ortho.tif"
     ],
     "dems": [
       "data/synthetic/dems/synthetic_01_dem.tif",
       "data/synthetic/dems/synthetic_02_dem.tif",
-      "data/synthetic/dems/synthetic_03_dem.tif"
+      "data/synthetic/dems/synthetic_03_dem.tif",
+      "data/synthetic/dems/synthetic_04_dem.tif"
     ],
     "masks": [
       "data/synthetic/masks/synthetic_01_mask.tif",
       "data/synthetic/masks/synthetic_02_mask.tif",
-      "data/synthetic/masks/synthetic_03_mask.tif"
+      "data/synthetic/masks/synthetic_03_mask.tif",
+      "data/synthetic/masks/synthetic_04_mask.tif"
     ],
     "annotations": [
       "data/synthetic/annotations/synthetic_annotations.gpkg"

@@ -1,6 +1,8 @@
 """Training entrypoint for grave border detection."""
 
 import logging
+from pathlib import Path
+from typing import Any, cast
 
 import hydra
 import lightning as L
@@ -14,6 +16,7 @@ from grave_border_detection.callbacks import (
 )
 from grave_border_detection.data.datamodule import GraveDataModule
 from grave_border_detection.models.segmentation import SegmentationModel
+from grave_border_detection.utils.dataset_hash import compute_dataset_id, get_dataset_summary
 
 log = logging.getLogger(__name__)
 
@@ -143,9 +146,26 @@ def train(cfg: DictConfig) -> float | None:
     callbacks = setup_callbacks(cfg)
     logger = setup_logger(cfg)
 
-    # Log hyperparameters to MLflow
+    # Compute dataset versioning
+    data_root = Path(cfg.data.root)
+    dataset_id = compute_dataset_id(
+        data_root=data_root,
+        train_cemeteries=list(cfg.data.train_cemeteries),
+        val_cemeteries=list(cfg.data.val_cemeteries),
+        test_cemeteries=list(cfg.data.get("test_cemeteries", [])),
+    )
+    dataset_summary = get_dataset_summary(data_root)
+    log.info(f"Dataset ID: {dataset_id}")
+
+    # Log hyperparameters to MLflow (including dataset versioning)
     if logger is not None:
-        logger.log_hyperparams(OmegaConf.to_container(cfg, resolve=True))  # type: ignore[arg-type]
+        config_dict = cast("dict[str, Any]", OmegaConf.to_container(cfg, resolve=True))
+        config_dict["dataset_id"] = dataset_id
+        config_dict["dataset_summary"] = dataset_summary
+        logger.log_hyperparams(config_dict)
+
+        # Log dataset_id as a tag for prominent visibility in MLflow UI
+        logger.experiment.set_tag("dataset_id", dataset_id)
 
     # Determine accelerator
     accelerator = cfg.training.get("accelerator", "auto")

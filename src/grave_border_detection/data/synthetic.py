@@ -106,7 +106,7 @@ def render_orthophoto(
 
     # Draw graves as lighter rectangles (stone/gravel color)
     for grave in graves:
-        minx, miny, maxx, maxy = [int(v) for v in grave.bounds]
+        minx, miny, maxx, maxy = (int(v) for v in grave.bounds)
 
         # Random grave color (gray/brown stone)
         grave_color = rng.integers(140, 200, size=3)
@@ -162,7 +162,7 @@ def render_dem(
 
     # Raise grave borders
     for grave in graves:
-        minx, miny, maxx, maxy = [int(v) for v in grave.bounds]
+        minx, miny, maxx, maxy = (int(v) for v in grave.bounds)
 
         # Raise the entire grave area slightly
         dem[0, miny:maxy, minx:maxx] += grave_elevation * 0.5
@@ -195,7 +195,7 @@ def render_mask(
     mask = np.zeros((1, height, width), dtype=np.uint8)
 
     for grave in graves:
-        minx, miny, maxx, maxy = [int(v) for v in grave.bounds]
+        minx, miny, maxx, maxy = (int(v) for v in grave.bounds)
         mask[0, miny:maxy, minx:maxx] = 1
 
     return mask

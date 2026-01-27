@@ -2,12 +2,12 @@
 # Override with: uv run python -m grave_border_detection.train data.batch_size=16
 
 defaults:
+  - _self_                      # Base config applied first
   - data: rgb_dem              # Options: rgb_dem (4ch), rgb_only (3ch)
   - model: unet_resnet34
   - training: default
   - augmentation: default
-  - optional experiment: null  # Presets: debug, baseline_rgb, full
-  - _self_
+  - optional experiment: null  # Presets: debug (can override experiment_name)
 
 # Project paths
 paths:

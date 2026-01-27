@@ -11,7 +11,7 @@ annotations_path: ${data.root}/annotations/synthetic_annotations.gpkg
 # Train/Val/Test split by cemetery ID
 train_cemeteries: ["synthetic_01", "synthetic_02"]
 val_cemeteries: ["synthetic_03"]
-test_cemeteries: []
+test_cemeteries: ["synthetic_04"]
 
 # Tiling configuration
 tiling:

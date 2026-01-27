@@ -3,7 +3,7 @@
 from typing import Any, cast
 
 import lightning as L
-import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
+import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
