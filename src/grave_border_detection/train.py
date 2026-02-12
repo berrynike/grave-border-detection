@@ -6,6 +6,7 @@ from typing import Any, cast
 
 import hydra
 import lightning as L
+from hydra.utils import to_absolute_path
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import MLFlowLogger
 from omegaconf import DictConfig, OmegaConf
@@ -22,11 +23,12 @@ from grave_border_detection.utils.dataset_hash import compute_dataset_id, get_da
 log = logging.getLogger(__name__)
 
 
-def setup_callbacks(cfg: DictConfig) -> list[L.Callback]:
+def setup_callbacks(cfg: DictConfig, data_root: str) -> list[L.Callback]:
     """Set up training callbacks.
 
     Args:
         cfg: Hydra config.
+        data_root: Absolute path to data root directory.
 
     Returns:
         List of Lightning callbacks.
@@ -65,12 +67,14 @@ def setup_callbacks(cfg: DictConfig) -> list[L.Callback]:
     # Full cemetery visualization (after test phase)
     test_cemeteries = list(cfg.data.get("test_cemeteries", []))
     if test_cemeteries:
+        dem_norm_method = cfg.data.dem.normalization.method
         full_viz_callback = FullCemeteryVisualizationCallback(
-            data_root=cfg.data.root,
+            data_root=data_root,
             test_cemeteries=test_cemeteries,
             tile_size=cfg.data.tiling.tile_size,
             overlap=cfg.data.tiling.overlap,
             use_dem=cfg.data.use_dem,
+            dem_normalization_method=dem_norm_method,
         )
         callbacks.append(full_viz_callback)
 
@@ -118,9 +122,16 @@ def train(cfg: DictConfig) -> float | None:
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
 
+    # Extract DEM normalization config
+    dem_norm_method = cfg.data.dem.normalization.method
+    dem_norm_params = dict(cfg.data.dem.normalization.get(dem_norm_method, {}))
+
+    # Use absolute path since Hydra may change cwd
+    data_root = to_absolute_path(cfg.data.root)
+
     # Create data module
     data_module = GraveDataModule(
-        data_root=cfg.data.root,
+        data_root=data_root,
         train_cemeteries=list(cfg.data.train_cemeteries),
         val_cemeteries=list(cfg.data.val_cemeteries),
         test_cemeteries=list(cfg.data.get("test_cemeteries", [])),
@@ -128,16 +139,20 @@ def train(cfg: DictConfig) -> float | None:
         overlap=cfg.data.tiling.overlap,
         min_mask_coverage=cfg.data.tiling.get("min_mask_coverage", 0.0),
         use_dem=cfg.data.use_dem,
+        dem_normalization_method=dem_norm_method,
+        dem_normalization_params=dem_norm_params,
         batch_size=cfg.data.batch_size,
         num_workers=cfg.data.num_workers,
     )
 
-    # Create model
+    # Create model (use data_module.input_channels to ensure consistency)
+    in_channels = data_module.input_channels
+    log.info(f"Model input channels: {in_channels} (from data module)")
     model = SegmentationModel(
         architecture=cfg.model.architecture,
         encoder_name=cfg.model.encoder_name,
         encoder_weights=cfg.model.encoder_weights,
-        in_channels=cfg.model.in_channels,
+        in_channels=in_channels,
         classes=cfg.model.classes,
         lr=cfg.training.optimizer.lr,
         weight_decay=cfg.training.optimizer.weight_decay,
@@ -147,18 +162,18 @@ def train(cfg: DictConfig) -> float | None:
     )
 
     # Set up callbacks and logger
-    callbacks = setup_callbacks(cfg)
+    callbacks = setup_callbacks(cfg, data_root)
     logger = setup_logger(cfg)
 
     # Compute dataset versioning
-    data_root = Path(cfg.data.root)
+    data_root_path = Path(data_root)
     dataset_id = compute_dataset_id(
-        data_root=data_root,
+        data_root=data_root_path,
         train_cemeteries=list(cfg.data.train_cemeteries),
         val_cemeteries=list(cfg.data.val_cemeteries),
         test_cemeteries=list(cfg.data.get("test_cemeteries", [])),
     )
-    dataset_summary = get_dataset_summary(data_root)
+    dataset_summary = get_dataset_summary(data_root_path)
     log.info(f"Dataset ID: {dataset_id}")
 
     # Log hyperparameters to MLflow (including dataset versioning)

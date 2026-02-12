@@ -18,6 +18,8 @@ def predict_full_cemetery(
     orthophoto_path: Path,
     mask_path: Path | None = None,
     dem_path: Path | None = None,
+    dem_path_2: Path | None = None,
+    dem_normalization_method: str = "zscore",
     tile_size: int = 512,
     overlap: float = 0.15,
     device: torch.device | None = None,
@@ -28,7 +30,9 @@ def predict_full_cemetery(
         model: Trained segmentation model.
         orthophoto_path: Path to orthophoto GeoTIFF.
         mask_path: Optional path to ground truth mask.
-        dem_path: Optional path to DEM GeoTIFF.
+        dem_path: Optional path to DEM GeoTIFF (or first DEM for local_height_slope mode).
+        dem_path_2: Optional path to second DEM for local_height_slope mode.
+        dem_normalization_method: DEM normalization method (zscore, local_height, slope, local_height_slope).
         tile_size: Size of tiles for inference.
         overlap: Overlap between tiles (0.0 to 0.5).
         device: Device to run inference on.
@@ -65,8 +69,16 @@ def predict_full_cemetery(
         rgb_data = src.read([1, 2, 3])  # (3, H, W)
         rgb_image = np.transpose(rgb_data, (1, 2, 0))  # (H, W, 3)
 
-    # Check if we need DEM
+    # Check if we need DEM(s)
     use_dem = dem_path is not None and dem_path.exists()
+    dual_channel_modes = ("local_height_slope", "zscore_slope", "zscore_local_height")
+    use_combined_dem = (
+        dem_normalization_method in dual_channel_modes
+        and dem_path_2 is not None
+        and dem_path_2.exists()
+    )
+    # Precomputed DEMs don't need per-tile normalization
+    precomputed_dem = dem_normalization_method in ("local_height", "slope")
 
     # ImageNet normalization
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -75,6 +87,7 @@ def predict_full_cemetery(
     # Process each tile
     with rasterio.open(orthophoto_path) as ortho_src:
         dem_src = rasterio.open(dem_path) if use_dem else None
+        dem_src_2 = rasterio.open(dem_path_2) if use_combined_dem else None
 
         try:
             for tile in tiles:
@@ -95,16 +108,31 @@ def predict_full_cemetery(
                     rgb_normalized[c] = (rgb_normalized[c] - mean[c]) / std[c]
 
                 # Stack channels
-                if use_dem and dem_src is not None:
+                if use_combined_dem and dem_src is not None and dem_src_2 is not None:
+                    # Dual-channel DEM modes
+                    dem_tile_1 = dem_src.read(1, window=window).astype(np.float32)
+                    dem_tile_2 = dem_src_2.read(1, window=window).astype(np.float32)
+
+                    # For zscore_* modes, first channel is raw DEM that needs zscore normalization
+                    if dem_normalization_method in ("zscore_slope", "zscore_local_height"):
+                        dem_mean = dem_tile_1.mean()
+                        dem_std = dem_tile_1.std() + 1e-6
+                        dem_tile_1 = (dem_tile_1 - dem_mean) / dem_std
+
+                    dem_stacked = np.stack([dem_tile_1, dem_tile_2], axis=0)  # (2, H, W)
+                    input_tensor = np.concatenate([rgb_normalized, dem_stacked], axis=0)
+                elif use_dem and dem_src is not None:
                     dem_tile = dem_src.read(1, window=window)  # (H, W)
-                    dem_tile = dem_tile[np.newaxis, :, :]  # (1, H, W)
-                    # Z-score normalize DEM
-                    dem_mean = dem_tile.mean()
-                    dem_std = dem_tile.std() + 1e-6
-                    dem_normalized = (dem_tile - dem_mean) / dem_std
-                    input_tensor = np.concatenate(
-                        [rgb_normalized, dem_normalized.astype(np.float32)], axis=0
-                    )
+                    dem_tile = dem_tile[np.newaxis, :, :].astype(np.float32)  # (1, H, W)
+                    if precomputed_dem:
+                        # Precomputed DEM is already normalized
+                        dem_normalized = dem_tile
+                    else:
+                        # Z-score normalize DEM per tile (legacy behavior)
+                        dem_mean = dem_tile.mean()
+                        dem_std = dem_tile.std() + 1e-6
+                        dem_normalized = (dem_tile - dem_mean) / dem_std
+                    input_tensor = np.concatenate([rgb_normalized, dem_normalized], axis=0)
                 else:
                     input_tensor = rgb_normalized
 
@@ -131,6 +159,8 @@ def predict_full_cemetery(
         finally:
             if dem_src is not None:
                 dem_src.close()
+            if dem_src_2 is not None:
+                dem_src_2.close()
 
     # Average overlapping predictions
     prediction = prediction_sum / np.maximum(prediction_count, 1.0)

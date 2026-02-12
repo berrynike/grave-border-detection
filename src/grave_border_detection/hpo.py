@@ -38,7 +38,10 @@ from lightning.pytorch.loggers import MLFlowLogger
 from omegaconf import DictConfig, OmegaConf
 from optuna.integration import PyTorchLightningPruningCallback
 
-from grave_border_detection.callbacks import ImageLoggerCallback
+from grave_border_detection.callbacks import (
+    FullCemeteryVisualizationCallback,
+    ImageLoggerCallback,
+)
 from grave_border_detection.data.datamodule import GraveDataModule
 from grave_border_detection.models.segmentation import SegmentationModel
 from grave_border_detection.utils.dataset_hash import compute_dataset_id
@@ -113,31 +116,54 @@ def create_objective(
         max_epochs = params.get("max_epochs", cfg.training.max_epochs)
         encoder_name = params.get("encoder_name", cfg.model.encoder_name)
 
+        # DEM normalization (if in search space)
+        # Special value "none" means RGB-only (no DEM)
+        dem_normalization_method = params.get(
+            "dem_normalization_method",
+            cfg.data.get("dem", {}).get("normalization", {}).get("method", "zscore"),
+        )
+
+        # Handle "none" option - RGB only, no DEM
+        if dem_normalization_method == "none":
+            use_dem = False
+            dem_normalization_params: dict[str, float | int] = {}
+        else:
+            use_dem = cfg.data.use_dem
+            # Get method-specific params from config
+            dem_cfg = cfg.data.get("dem", {}).get("normalization", {})
+            dem_normalization_params = dict(dem_cfg.get(dem_normalization_method, {}))
+
         # Create data module (use absolute path since Hydra may change cwd)
         data_root = to_absolute_path(cfg.data.root)
 
         # Use smaller batch size for HPO (dataset may be small)
         hpo_batch_size = min(cfg.data.batch_size, 2)
 
+        # Include test cemeteries if run_test is enabled in HPO config
+        run_test = hpo_cfg.get("run_test", False)
+        test_cemeteries = list(cfg.data.get("test_cemeteries", [])) if run_test else []
+
         data_module = GraveDataModule(
             data_root=data_root,
             train_cemeteries=list(cfg.data.train_cemeteries),
             val_cemeteries=list(cfg.data.val_cemeteries),
-            test_cemeteries=[],  # No test during HPO
+            test_cemeteries=test_cemeteries,
             tile_size=cfg.data.tiling.tile_size,
             overlap=cfg.data.tiling.overlap,
             min_mask_coverage=cfg.data.tiling.get("min_mask_coverage", 0.0),
-            use_dem=cfg.data.use_dem,
+            use_dem=use_dem,
+            dem_normalization_method=dem_normalization_method,
+            dem_normalization_params=dem_normalization_params,
             batch_size=hpo_batch_size,
             num_workers=cfg.data.num_workers,
         )
 
-        # Create model with sampled hyperparameters
+        # Create model with sampled hyperparameters (use data_module.input_channels for consistency)
         model = SegmentationModel(
             architecture=cfg.model.architecture,
             encoder_name=encoder_name,
             encoder_weights=cfg.model.encoder_weights,
-            in_channels=cfg.model.in_channels,
+            in_channels=data_module.input_channels,
             classes=cfg.model.classes,
             lr=lr,
             weight_decay=weight_decay,
@@ -149,10 +175,31 @@ def create_objective(
         # Callbacks
         # Log images on last epoch (max_epochs) to ensure at least one image log
         callbacks: list[L.Callback] = [
-            PyTorchLightningPruningCallback(trial, monitor="val/dice"),
-            EarlyStopping(monitor="val/dice", patience=10, mode="max"),
             ImageLoggerCallback(num_samples=2, log_every_n_epochs=max_epochs),
         ]
+
+        # Optionally add pruning callback (disabled for ablation studies)
+        enable_pruning = hpo_cfg.get("enable_pruning", True)
+        if enable_pruning:
+            callbacks.append(PyTorchLightningPruningCallback(trial, monitor="val/dice"))
+
+        # Optionally add early stopping
+        enable_early_stopping = hpo_cfg.get("enable_early_stopping", True)
+        if enable_early_stopping:
+            callbacks.append(EarlyStopping(monitor="val/dice", patience=10, mode="max"))
+
+        # Add full cemetery visualization callback if test evaluation is enabled
+        if run_test and test_cemeteries:
+            callbacks.append(
+                FullCemeteryVisualizationCallback(
+                    data_root=data_root,
+                    test_cemeteries=test_cemeteries,
+                    tile_size=cfg.data.tiling.tile_size,
+                    overlap=cfg.data.tiling.overlap,
+                    use_dem=use_dem,
+                    dem_normalization_method=dem_normalization_method,
+                )
+            )
 
         # Create child run under parent (nested run pattern)
         # This groups all trials under the parent HPO run
@@ -177,6 +224,7 @@ def create_objective(
                 "dice_weight": 1.0 - bce_weight,
                 "max_epochs": max_epochs,
                 "encoder_name": encoder_name,
+                "dem_normalization_method": dem_normalization_method,
             }
         )
 
@@ -197,6 +245,11 @@ def create_objective(
             trainer.fit(model, data_module)
         except optuna.TrialPruned:
             raise  # Re-raise pruning exception
+
+        # Run test evaluation if enabled and test data available
+        if run_test and test_cemeteries:
+            log.info(f"Running test evaluation for trial {trial.number}...")
+            trainer.test(model, data_module)
 
         # Return best validation dice (or current if no best)
         val_dice = trainer.callback_metrics.get("val/dice")

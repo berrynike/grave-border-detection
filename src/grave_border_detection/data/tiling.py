@@ -247,6 +247,37 @@ def filter_tiles_by_mask_coverage(
     return filtered
 
 
+def filter_tiles_by_valid_dem(
+    tiles_info: list[TileInfo],
+    valid_mask_path: Path,
+    min_valid_coverage: float = 0.95,
+    tile_size: int = 512,
+) -> list[TileInfo]:
+    """Filter tiles to keep only those with sufficient valid DEM coverage.
+
+    Use this to exclude tiles that fall outside the DEM coverage area.
+
+    Args:
+        tiles_info: List of TileInfo to filter.
+        valid_mask_path: Path to valid mask GeoTIFF (1=valid DEM, 0=nodata).
+        min_valid_coverage: Minimum fraction of tile that must have valid DEM data.
+        tile_size: Tile size for padding calculation.
+
+    Returns:
+        Filtered list of TileInfo.
+    """
+    filtered = []
+
+    with rasterio.open(valid_mask_path) as src:
+        for tile in tiles_info:
+            data = read_tile(src, tile, pad_to_size=tile_size)
+            valid_coverage = float((data > 0).mean())
+            if valid_coverage >= min_valid_coverage:
+                filtered.append(tile)
+
+    return filtered
+
+
 def get_tile_transform(
     src_transform: rasterio.Affine,
     tile: TileInfo,

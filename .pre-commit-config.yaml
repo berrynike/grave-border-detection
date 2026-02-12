@@ -29,6 +29,7 @@ repos:
           - hydra-core
           - omegaconf
           - segmentation-models-pytorch
+          - scipy
         args: [--config-file=pyproject.toml]
         pass_filenames: false
         entry: bash -c 'mypy src/'

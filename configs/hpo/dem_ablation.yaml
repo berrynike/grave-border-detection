@@ -1,0 +1,54 @@
+# DEM Ablation Study HPO
+# Compares: no DEM, zscore, local_height, slope, and combinations
+# Run with: caffeinate -dims uv run python -m grave_border_detection.hpo +hpo=dem_ablation data=real experiment_name=real
+
+# Study settings
+study_name: dem_ablation
+storage: sqlite:///hpo_dem_ablation.db
+direction: maximize
+n_trials: 14  # 7 DEM modes x 2 LR values each
+timeout: null
+
+# Disable pruning - we want all trials to complete for fair comparison
+enable_pruning: false
+enable_early_stopping: false
+
+# Run full test evaluation on all trials
+run_test: true
+
+# Pruner config (ignored when enable_pruning=false, but kept for reference)
+pruner:
+  type: median
+  n_startup_trials: 7
+  n_warmup_steps: 10
+  interval_steps: 1
+
+# Search space: DEM ablation study
+search_space:
+  # DEM normalization method - the main comparison
+  # "none" = RGB only (3 channels)
+  # Single channel (4 ch): zscore, local_height, slope
+  # Dual channel (5 ch): local_height_slope, zscore_slope, zscore_local_height
+  dem_normalization_method:
+    type: categorical
+    choices:
+      - none
+      - zscore
+      - local_height
+      - slope
+      - local_height_slope
+      - zscore_slope
+      - zscore_local_height
+
+  # Learning rate - two discrete values for comparison
+  lr:
+    type: categorical
+    choices:
+      - 0.0001
+      - 0.0002
+
+  # Fixed epochs for fair comparison
+  max_epochs:
+    type: categorical
+    choices:
+      - 30

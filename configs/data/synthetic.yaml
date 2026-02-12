@@ -24,7 +24,32 @@ tiling:
 use_dem: true
 input_channels: 4
 
+# DEM normalization configuration
+# Applied to full cemetery DEMs at setup time, before tiling
+dem:
+  normalization:
+    method: zscore  # zscore, percentile_clip, local_height, slope, robust_zscore
+
+    # Method-specific parameters (only the selected method's params are used)
+    zscore:
+      epsilon: 1.0e-8
+
+    percentile_clip:
+      lower: 2.0
+      upper: 98.0
+
+    local_height:
+      window_size: 128       # pixels
+      ground_percentile: 20.0
+      max_height: 0.5        # meters
+
+    slope:
+      pixel_size: 0.02       # meters per pixel
+
+    robust_zscore:
+      epsilon: 1.0e-8
+
 # DataLoader settings
 batch_size: 8
 num_workers: 4
-pin_memory: true
+# Let the DataModule choose a sensible, device-aware default for pin_memory

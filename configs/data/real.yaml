@@ -9,10 +9,11 @@ dems_dir: ${data.root}/dems
 masks_dir: ${data.root}/masks
 annotations_path: null
 
-# Train/Val/Test split by cemetery ID (6/2/2 split)
-train_cemeteries: ["cemetery_01", "cemetery_02", "cemetery_03", "cemetery_04", "cemetery_05", "cemetery_06"]
-val_cemeteries: ["cemetery_07", "cemetery_08"]
-test_cemeteries: ["cemetery_09", "cemetery_10"]
+# Train/Val/Test split by cemetery ID (7/1/2 split)
+# Includes challenging cemeteries (09=building) in train for better generalization
+train_cemeteries: ["cemetery_01", "cemetery_02", "cemetery_03", "cemetery_04", "cemetery_05", "cemetery_06", "cemetery_09"]
+val_cemeteries: ["cemetery_08"]
+test_cemeteries: ["cemetery_07", "cemetery_10"]
 
 # Tiling configuration
 tiling:
@@ -24,7 +25,34 @@ tiling:
 use_dem: true
 input_channels: 4
 
+# DEM normalization configuration
+# Applied to full cemetery DEMs at setup time, before tiling
+dem:
+  normalization:
+    method: local_height  # zscore, percentile_clip, local_height, slope, robust_zscore
+
+    # Method-specific parameters (only the selected method's params are used)
+    zscore:
+      epsilon: 1.0e-8
+
+    percentile_clip:
+      lower: 2.0
+      upper: 98.0
+
+    local_height:
+      window_size: 128       # pixels (~2.5m at 0.02m resolution)
+      ground_percentile: 20.0
+      max_height: 0.5        # meters (clip heights above this)
+
+    slope:
+      pixel_size: 0.02       # meters per pixel
+
+    robust_zscore:
+      epsilon: 1.0e-8
+
 # DataLoader settings
-batch_size: 8
+# Conservative defaults for 4K RGB+DEM on M3 Mac
+batch_size: 4
 num_workers: 4
-pin_memory: true
+# Let the DataModule choose a sensible, device-aware default for pin_memory
+# (False on MPS, True on CUDA/CPU)

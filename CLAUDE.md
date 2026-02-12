@@ -81,10 +81,11 @@ grave-border-detection/
 - Implement proper train/val/test splits
 - Use Albumentations for augmentation
 - Consider multi-channel input (RGB + height)
+- **MLflow experiments**: Use `experiment_name=debug` for test/dev runs, `experiment_name=real` for actual experiments
 
 ## Testing Requirements
 
-- Minimum 80% test coverage
+- Write tests for new code
 - Unit tests in `tests/unit/`
 - Integration tests in `tests/integration/`
 - Use pytest fixtures for test data
@@ -96,7 +97,7 @@ grave-border-detection/
 Before completing any task:
 
 - [ ] `uv run task lint` passes (ruff check, format, mypy)
-- [ ] `uv run task test` passes with 80%+ coverage
+- [ ] `uv run task test` passes
 - [ ] No unused imports/variables
 - [ ] No commented-out code
 - [ ] CRS preserved in geospatial operations

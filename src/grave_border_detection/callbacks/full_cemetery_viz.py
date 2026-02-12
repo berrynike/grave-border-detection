@@ -41,6 +41,7 @@ class FullCemeteryVisualizationCallback(L.Callback):
         tile_size: int = 512,
         overlap: float = 0.15,
         use_dem: bool = False,
+        dem_normalization_method: str = "zscore",
     ) -> None:
         """Initialize callback.
 
@@ -50,6 +51,7 @@ class FullCemeteryVisualizationCallback(L.Callback):
             tile_size: Tile size for inference.
             overlap: Overlap between tiles.
             use_dem: Whether to use DEM channel.
+            dem_normalization_method: DEM normalization method (zscore, local_height, slope, local_height_slope).
         """
         super().__init__()
         self.data_root = Path(data_root)
@@ -57,6 +59,7 @@ class FullCemeteryVisualizationCallback(L.Callback):
         self.tile_size = tile_size
         self.overlap = overlap
         self.use_dem = use_dem
+        self.dem_normalization_method = dem_normalization_method
 
     def on_test_end(
         self,
@@ -88,11 +91,33 @@ class FullCemeteryVisualizationCallback(L.Callback):
                 if not mask_path.exists():
                     mask_path = self.data_root / "masks" / f"{cemetery_id}.tif"
 
+                # Build DEM paths based on normalization method
                 dem_path = None
+                dem_path_2 = None
                 if self.use_dem:
-                    dem_path = self.data_root / "dems" / f"{cemetery_id}_dem.tif"
-                    if not dem_path.exists():
-                        dem_path = self.data_root / "dems" / f"{cemetery_id}.tif"
+                    dems_dir = self.data_root / "dems"
+                    # Dual-channel modes
+                    if self.dem_normalization_method == "local_height_slope":
+                        dem_path = dems_dir / f"{cemetery_id}_dem_local_height.tif"
+                        dem_path_2 = dems_dir / f"{cemetery_id}_dem_slope.tif"
+                    elif self.dem_normalization_method == "zscore_slope":
+                        # zscore computed at runtime from raw DEM, slope precomputed
+                        dem_path = dems_dir / f"{cemetery_id}_dem.tif"
+                        dem_path_2 = dems_dir / f"{cemetery_id}_dem_slope.tif"
+                    elif self.dem_normalization_method == "zscore_local_height":
+                        # zscore computed at runtime from raw DEM, local_height precomputed
+                        dem_path = dems_dir / f"{cemetery_id}_dem.tif"
+                        dem_path_2 = dems_dir / f"{cemetery_id}_dem_local_height.tif"
+                    elif self.dem_normalization_method in ("local_height", "slope"):
+                        # Use precomputed normalized DEM
+                        dem_path = (
+                            dems_dir / f"{cemetery_id}_dem_{self.dem_normalization_method}.tif"
+                        )
+                    else:
+                        # Raw DEM (zscore, percentile_clip, etc.)
+                        dem_path = dems_dir / f"{cemetery_id}_dem.tif"
+                        if not dem_path.exists():
+                            dem_path = dems_dir / f"{cemetery_id}.tif"
 
                 if not ortho_path.exists():
                     log.warning(f"Orthophoto not found: {ortho_path}")
@@ -104,6 +129,8 @@ class FullCemeteryVisualizationCallback(L.Callback):
                     orthophoto_path=ortho_path,
                     mask_path=mask_path if mask_path.exists() else None,
                     dem_path=dem_path,
+                    dem_path_2=dem_path_2,
+                    dem_normalization_method=self.dem_normalization_method,
                     tile_size=self.tile_size,
                     overlap=self.overlap,
                     device=device,
