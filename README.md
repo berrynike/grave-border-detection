@@ -196,6 +196,7 @@ The default model is U-Net with a ResNet34 encoder (pretrained on ImageNet):
 
 MIT
 
-## Author
+## Authors
 
-Berenike Radeck
+- Berenike Radeck
+- Michael Radeck
